@@ -1,0 +1,41 @@
+import json
+
+with open('TodaysBetsNormalized.pickle', 'r') as input_file:
+    Current_Bets = json.load(input_file)
+
+arbitrage_opportunities = []
+
+Completed = []
+for bet in Current_Bets:
+    if bet['Normalized_Teams'] not in Completed:
+        current_match = bet['Normalized_Teams']
+        all_current_matches = []
+        all_current_team1_odds = []
+        all_current_team2_odds = []
+        all_current_draw_odds = []
+        for other_bet in range(len(Current_Bets)):
+            if Current_Bets[other_bet]['Normalized_Teams'] == current_match:
+                all_current_matches.append(other_bet)
+                all_current_team1_odds.append([Current_Bets[other_bet]["Team_One_Odds_Normalized"], Current_Bets[other_bet]["Sports Website"]])
+                all_current_team2_odds.append([Current_Bets[other_bet]["Team_Two_Odds_Normalized"], Current_Bets[other_bet]["Sports Website"]])
+                all_current_draw_odds.append([Current_Bets[other_bet]["Draw Return"], Current_Bets[other_bet]["Sports Website"]])
+
+        all_current_draw_odds.sort(key = lambda x: float(x[0]), reverse = True)
+        all_current_team2_odds.sort(key = lambda x: float(x[0]), reverse = True)
+        all_current_team1_odds.sort(key = lambda x: float(x[0]), reverse = True)
+        Completed.append(bet['Normalized_Teams'])
+        if (1/all_current_draw_odds[0][0] + 1/all_current_team2_odds[0][0] + 1/all_current_team1_odds[0][0]) < 1:
+            websites = []
+            websites.append(all_current_draw_odds[0][1])
+            websites.append(all_current_team2_odds[0][1])
+            websites.append(all_current_team1_odds[0][1])
+            websites = list(set(websites))
+            websites.append(bet["Normalized_Teams"])
+            arbitrage_opportunities.append(websites)
+            print()
+
+
+print(arbitrage_opportunities)
+
+
+
