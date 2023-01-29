@@ -1,0 +1,106 @@
+import pickle
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+import json
+def manhattan(a, b):
+    return sum(abs(val1-val2) for val1, val2 in zip(a,b))
+
+
+#Important that the list of teams is already split and lowered
+class Recommender:
+    def __init__(self, list_of_teams):
+        self.teams = [x.lower() for x in list_of_teams]
+        self.unchanged_teams = list_of_teams
+
+    def getteam(self, team_name, recognition_threshold = 0.65, tfidfdata = "None", manhattan_threshold = 10):
+        tfidf_array, tfidfvectorizr, computed_Tfidf, tfidf_array_condensed, hyperparameter1, hyperparameter2 = tfidfdata
+        current_match = []
+        product_tfidf = tfidfvectorizr.transform([team_name])
+        product_list = (product_tfidf.toarray()[0])
+        nonzeroes = []
+        # if len(colon_hyphen_removed) <= 9:
+        #     recognition_threshold = min(0.9, recognition_threshold + 0.1)
+        for i in range(len(product_list)):
+            if product_list[i] != 0:
+                nonzeroes.append([i, product_list[i]])
+        nonzeroes = sorted(nonzeroes, key=lambda x: x[-1])
+        nonzeroes = [x[0] for x in nonzeroes]
+        for i in range(computed_Tfidf.shape[0]):
+            x = 0
+            for j in range(min(len(nonzeroes),hyperparameter1)):
+                if tfidf_array[i][nonzeroes[j]] != 0:
+                    x += 1
+
+            if x >= min(len(nonzeroes), hyperparameter2):
+                indexes = [x[0] for x in tfidf_array_condensed[i]]
+                indexes = list(set(indexes + nonzeroes))
+                product_list_revised = []
+                tfidf_revised = []
+                for k in indexes:
+                    product_list_revised.append(product_list[k])
+                    tfidf_revised.append(tfidf_array[i][k])
+                similarity = manhattan(tfidf_revised, product_list_revised)
+
+                if len(tfidf_array_condensed[i]) == 0:
+                    similarity = -1000
+                if abs(similarity) < manhattan_threshold:
+                    similarity = cosine_similarity(product_tfidf, computed_Tfidf[i])[0][0]
+                    current_match.append([similarity, self.unchanged_teams[i]])
+
+        current_match.sort(key = lambda x: x[0], reverse=True)
+        final_matches = []
+        for match in range(len(current_match)):
+            final_matches.append({
+                "team name" : current_match[match][1],
+                "similarity score" : round(current_match[match][0], 5)
+            })
+        return final_matches
+
+
+with open('Master_Team_List.pickle', 'rb') as input_file:
+    team_list = pickle.load(input_file)
+team_list = [x for x in team_list if len(x) >= 2]
+vectorizer = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
+tfidfcomputed = vectorizer.fit_transform(team_list)
+tfidfarray = tfidfcomputed.toarray()
+tfidfarray_condensed = []
+recommender = Recommender(team_list)
+for i in range(len(tfidfarray)):
+    tfidfarray_condensed.append([[ind, x] for ind, x in enumerate(tfidfarray[i]) if x != 0])
+tfidfdata = [tfidfarray, vectorizer, tfidfcomputed, tfidfarray_condensed, 10, 2]
+
+
+with open('TodaysBetsUnNormalized.pickle', 'r') as input_file:
+    Current_Bets = json.load(input_file)
+
+for bet in range(len(Current_Bets)):
+    Team1 = Current_Bets[bet]['Team_One']
+    Team2 = Current_Bets[bet]['Team_Two']
+    recommendation1 = (recommender.getteam(Team1, tfidfdata=tfidfdata, recognition_threshold=0.7))[0]["team name"]
+    recommendation2 = (recommender.getteam(Team2, tfidfdata=tfidfdata, recognition_threshold=0.7))[0]["team name"]
+    recommendations = [recommendation1, recommendation2]
+    recommendations.sort()
+    if recommendations == [recommendation1, recommendation2]:
+        Current_Bets[bet]["Team_One_Normalized"] = recommendations[0]
+        Current_Bets[bet]["Team_Two_Normalized"] = recommendations[1]
+        Current_Bets[bet]["Team_One_Odds_Normalized"] = Current_Bets[bet]['Team One Win Return']
+        Current_Bets[bet]["Team_Two_Odds_Normalized"] = Current_Bets[bet]['Team Two Win Return']
+    elif recommendations == [recommendation2, recommendation1]:
+        Current_Bets[bet]["Team_One_Normalized"] = recommendations[0]
+        Current_Bets[bet]["Team_Two_Normalized"] = recommendations[1]
+        Current_Bets[bet]["Team_One_Odds_Normalized"] = Current_Bets[bet]['Team Two Win Return']
+        Current_Bets[bet]["Team_Two_Odds_Normalized"] = Current_Bets[bet]['Team One Win Return']
+    else:
+        print("what in the actual fuck")
+    recommendation_string = recommendations[0] + recommendations[1]
+    if recommendations[1] != recommendations[0]:
+        Current_Bets[bet]["Normalized_Teams"] = recommendation_string
+    else:
+        Current_Bets[bet]["Normalized_Teams"] = "Error came up normalizing"
+    print(recommendation_string)
+
+
+Current_Bets.sort(key = lambda x: x["Normalized_Teams"])
+
+with open('TodaysBetsNormalized.pickle', 'w') as exportfile:
+    json.dump(Current_Bets, exportfile)
