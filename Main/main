@@ -1,0 +1,387 @@
+import re
+from fractions import Fraction
+import time as tm
+from bs4 import BeautifulSoup
+import requests
+import pickle
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+from webdriver_manager.chrome import ChromeDriverManager
+import json
+
+
+#        driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Downloads/chromedriver')
+#         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+def scrapingFootball(name):
+    Bets = []
+
+    def Betsdump(Bets_list):
+        Bets_list = [dict(t) for t in {tuple(d.items()) for d in Bets_list}]
+        with open('TodaysBetsUnNormalized.pickle', 'w') as exportfile:
+            json.dump(Bets_list, exportfile)
+
+    def eighteighteight_sport():
+        nonlocal Bets
+        links = ["https://www.888sport.com/football/tomorrow/",
+                 "https://www.888sport.com/football/accas/us-mls/co-38/",
+                 "https://www.888sport.com/football/today/st-2/",
+                 "https://www.888sport.com/football/united-states-of-america/us-usl-championship-t-329473/",
+                 "https://www.888sport.com/football/accas/brazilian-serie-a/co-46/"]
+        for link in links:
+            options = Options()
+            options.add_experimental_option("detach", True)
+            options.add_argument("start-maximized")
+            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver.get(link)
+            #https://stackoverflow.com/questions/70861500/selenium-not-able-to-find-elements-by-classname
+            elems = driver.find_element(By.XPATH, "//body")
+            soup = elems.get_attribute('innerHTML')
+            soup = BeautifulSoup(soup)
+            driver.quit()
+            bets_888 = soup.find_all("div", attrs={"data-disable-event-container": "#event_"})
+            for bet in bets_888:
+                odds = bet.find_all("div", attrs={"data-betable":"1"})
+                betting_odds = []
+                for odd in odds:
+                    betting_odds.append(odd.text)
+                team1 = bet.find("div", class_="competitor competitor-home").text
+                team1 = team1.strip()
+                team2 = bet.find("div", class_="competitor competitor-away").text
+                team2 = team2.strip()
+                # time = bet.find("div", class_ = "time activated")["data-start-date-time"]
+
+                if betting_odds != [] and betting_odds != ['', '', '']:
+                    teamsandodds = [[team1, float(Fraction(betting_odds[0])) + 1],
+                                    [team2, float(Fraction(betting_odds[2])) + 1]]
+                    teamsandodds = sorted(teamsandodds, key=lambda x: x[0])
+                    Bets.append({
+                        "Team_One" : teamsandodds[0][0],
+                        "Team_Two" : teamsandodds[1][0],
+                        "Team One Win Return" : teamsandodds[0][1],
+                        "Team Two Win Return" : teamsandodds[1][1],
+                        "Draw Return" : float(Fraction(betting_odds[1])) + 1,
+                        "Sports Website" : "888sport.com"
+                    })
+            print("Complete: ", link)
+        # link = "https://www.888sport.com/football/accas/international-matches/co-8/"
+        # options = Options()
+        # options.add_argument("start-maximized")
+        # driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+        # driver.get(link)
+        # # https://stackoverflow.com/questions/70861500/selenium-not-able-to-find-elements-by-classname
+        # elems = driver.find_element(By.XPATH, "//body")
+        # soup = elems.get_attribute('innerHTML')
+        # soup = BeautifulSoup(soup)
+        # driver.quit()
+        # bets_888 = soup.find_all("div", attrs={"data-disable-event-container": "#event_"})
+        # for bet in bets_888:
+        #     odds = bet.find_all("div", attrs={"data-betable": "1"})
+        #     betting_odds = []
+        #     for odd in odds:
+        #         betting_odds.append(odd["data-decimal-price"])
+        #     team1 = bet.find("div", class_="competitor competitor-home").text
+        #     team1 = team1.strip()
+        #     team2 = bet.find("div", class_="competitor competitor-away").text
+        #     team2 = team2.strip()
+        #     try:
+        #         time = bet.find("div", class_="time")["data-start-date-time"]
+        #     except:
+        #         pass
+        #     if betting_odds != []:
+        #         teamsandodds = [[team1, float(betting_odds[0])],
+        #                         [team2, float(betting_odds[2])]]
+        #         teamsandodds = sorted(teamsandodds, key=lambda x: x[0])
+        #         Bets.append({
+        #             "Team_One": teamsandodds[0][0],
+        #             "Team_Two": teamsandodds[1][0],
+        #             "Team One Win Return": teamsandodds[0][1],
+        #             "Team Two Win Return": teamsandodds[1][1],
+        #             "Draw Return": float(betting_odds[1]),
+        #             "Sports Website": "888sport.com"
+        #         })
+
+
+    def BallyBet():
+        nonlocal Bets
+        links = ["https://in.ballybet.com/sports/soccer-betting/international-soccer-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/uefa-champions-league-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/uefa-europa-league-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/serie-a-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/la-liga-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/epl-3-way-lines.sbk",
+                 "https://in.ballybet.com/sports/soccer-betting/mls-3-way-lines.sbk"]
+        for link in links:
+            options = Options()
+            options.add_argument("start-maximized")
+            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver.get(link)
+            tm.sleep(5)
+            try:
+                select = Select(driver.find_element(By.ID, 'oddsFormatId'))
+            except:
+                print(link)
+                continue
+            select.select_by_visible_text('Decimal (2.50)')
+            tm.sleep(2)
+            soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
+            soup = BeautifulSoup(soup)
+            soup = soup.find("div", id="main-content")
+            soup = soup.find("div", class_ = "panel-body")
+            soup = soup.findAll('div', class_ = "row event")
+            driver.quit()
+            date = ""
+            for bet in soup:
+                if "date" in bet['class']:
+                    date = bet.text
+                if bet == None:
+                    continue
+                if bet.findAll('span', class_="team-title") == None:
+                    continue
+                # time = bet.find("div", id="time").text
+                # time = time.replace("This betting option is not available in the following jurisdiction(s) :", "")
+                # time = time.replace("US-NY", "")
+                # time = time.replace("Close", "")
+                # time = time.replace("PDT", "").strip()
+                rows = bet.findAll('div', class_= 'row')
+                teams = bet.findAll('span', class_="team-title")
+                odds = bet.findAll('div', class_="market")
+                teams = [x.text for x in teams]
+                odds = [x.text for x in odds]
+                if len(odds) != 5 or len(teams) != 3:
+                    continue
+                else:
+                    odds = [odds[1], odds[3], odds[4]]
+                    teams = [x for x in teams if x != "Tie"]
+                    try:
+                        teamsandodds = [[teams[0], float(odds[0])], [teams[1], float(odds[1])]]
+                    except ValueError:
+                        continue
+                    teamsandodds = sorted(teamsandodds, key=lambda x: x[0])
+                    Bets.append({
+                        "Team_One" : teamsandodds[0][0],
+                        "Team_Two" : teamsandodds[1][0],
+                        "Team One Win Return" : teamsandodds[0][1],
+                        "Team Two Win Return" : teamsandodds[1][1],
+                        "Draw Return" : float(odds[2]),
+                        "Sports Website" : "BalleyBet.com"
+                    })
+            print("Complete: ", link)
+
+
+    def actiontwentyfourseven():
+        nonlocal Bets
+        links = ["https://sportsbook.action247.com/en-us/sports/soccer",
+                 'https://sportsbook.action247.com/en-us/sports/soccer/competition/world-cup?id=3408',
+                 "https://sportsbook.action247.com/en-us/sport/soccer/international-clubs/uefa-champions-league/155?id=3408",
+                 "https://sportsbook.action247.com/en-us/sport/soccer/england/premier-league/1792?id=3408",
+                 "https://sportsbook.action247.com/en-us/sports/soccer/country/USA?id=490"]
+        for link in links:
+            options = Options()
+            options.add_argument("start-maximized")
+            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver.get(link)
+            # ignore_location = driver.find_element(By.CLASS_NAME, "table-padding")
+            # ignore_location = ignore_location.find_element(By.XPATH, ".//div/a")
+            # ignore_location.click()
+            tm.sleep(20)
+            elems = driver.find_element(By.XPATH, "//body")
+            soup = elems.get_attribute('innerHTML')
+            soup = BeautifulSoup(soup, 'html.parser')
+            driver.quit()
+            soup = soup.findAll("div", class_ = lambda x: x and "defaultMarketsView" in x)
+            print()
+            for bet in soup:
+                odds = bet.findAll("div", class_ = lambda x: x and "price-1" in x)
+                betting_odds = []
+                time = bet.find("div", class_ = lambda x: x and "eventTime" in x).text
+
+                clock = bet.find("div", class_ = lambda x: x and "liveClock" in x)
+                if clock != None:
+                    print()
+                    continue
+                for odd in odds:
+                    betting_odds.append(odd.text)
+                team_html = bet.findAll("div", class_=lambda x: x and "participantVertical" in x)
+                teams = []
+                for team in team_html:
+                    for div in team:
+                        teams.append(div)
+                if betting_odds == [] and teams != []:
+                    continue
+                for current_bet in range(len(betting_odds)):
+                    if betting_odds[current_bet][0] == "+":
+                        new_bet = float(betting_odds[current_bet][0:])
+                        new_bet = (new_bet + 100)/100
+                    elif betting_odds[current_bet][0] == "-":
+                        new_bet = abs(float(betting_odds[current_bet][0:]))
+                        new_bet = 100/new_bet
+                        new_bet = new_bet + 1
+                    else:
+                        print("SOMETHING BAD HAPPENED - ACTION247")
+                    betting_odds[current_bet] = new_bet
+                Bets.append({
+                    "Team_One": teams[0],
+                    "Team_Two": teams[1],
+                    "Team One Win Return": betting_odds[0],
+                    "Team Two Win Return": betting_odds[2],
+                    "Draw Return": betting_odds[1],
+                    "Sports Website": "Action247.com"
+                })
+            print("Complete: ", link)
+
+
+    #NOTE: MGM cannot scroll down, so it caps at 50 bets per link
+    def betmgm():
+        nonlocal Bets
+        links = ["https://sports.az.betmgm.com/en/sports/soccer-4/betting/europe-7",
+                 "https://sports.az.betmgm.com/en/sports/soccer-4/betting/usa-9/major-league-soccer-102849",
+                 "https://sports.az.betmgm.com/en/sports/soccer-4/betting/world-6",
+                 "https://sports.az.betmgm.com/en/sports/soccer-4/betting/england-14"]
+        for link in links:
+            options = Options()
+            options.add_argument("start-maximized")
+            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver.get(link)
+            tm.sleep(7)
+            soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
+            soup = BeautifulSoup(soup)
+            driver.quit()
+            soup = soup.findAll("ms-event", class_ = lambda x: x and "grid-event ms-active-highlight" in x)
+            if soup == []:
+                print("SOMETHING WENT WRONG WITH MGM")
+            for bet in soup:
+                x = bet
+                betting_odds_html = bet.findAll("div", class_ = "option-indicator")
+                islive = bet.find("ms-live-timer")
+                if islive != None:
+                    continue
+                time = bet.find("ms-prematch-timer", class_ = lambda x: x and "starting-time" in x).text
+                htmlteams = bet.findAll("div", class_ = "participant")
+                teams = []
+                for team in htmlteams:
+                    teams.append(team.text)
+                betting_odds = []
+                for odds in betting_odds_html:
+                    betting_odds.append(odds.text)
+                betting_odds = betting_odds[:3]
+                for current_bet in range(len(betting_odds)):
+                    if betting_odds[current_bet][0] == "+":
+                        new_bet = float(betting_odds[current_bet][0:])
+                        new_bet = (new_bet + 100)/100
+                    elif betting_odds[current_bet][0] == "-":
+                        new_bet = abs(float(betting_odds[current_bet][0:]))
+                        new_bet = 100/new_bet
+                        new_bet = new_bet + 1
+                    else:
+                        print("SOMETHING BAD HAPPENED - BETMGM")
+                    betting_odds[current_bet] = new_bet
+                Bets.append({
+                    "Team_One": teams[0],
+                    "Team_Two": teams[1],
+                    "Team One Win Return": betting_odds[0],
+                    "Team Two Win Return": betting_odds[2],
+                    "Draw Return": betting_odds[1],
+                    "Sports Website": "betmgm.com"
+                })
+            print("Complete: ", link)
+
+
+    def draftkings():
+        links = ["https://sportsbook.draftkings.com/leagues/soccer/usa---mls",
+        "https://sportsbook.draftkings.com/leagues/soccer/usa---usl-championship",
+        "https://sportsbook.draftkings.com/leagues/soccer/usa---usl-league-one",
+        "https://sportsbook.draftkings.com/leagues/soccer/world-cup-2022"]
+        for link in links:
+            options = webdriver.ChromeOptions()
+            options.add_argument("start-maximized")
+            # options.add_argument("ignore-certificate-errors")
+            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', chrome_options=options)
+            driver.get(link)
+            tm.sleep(1)
+            soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
+            soup = BeautifulSoup(soup)
+            soup = soup.findAll('div', class_ = "sportsbook-event-accordion__wrapper expanded")
+            for bet in soup:
+                teams = bet.findAll("span", class_ = 'sportsbook-outcome-cell__label')
+                teams = [team.text for team in teams]
+                teams.remove("Draw")
+                betting_odds = bet.findAll("span", class_ = "sportsbook-odds american default-color")
+                betting_odds = [x.text for x in betting_odds]
+                time = bet.find("span", class_ = 'sportsbook-event-accordion__date')
+                for current_bet in range(len(betting_odds)):
+                    if betting_odds[current_bet][0] == "+":
+                        new_bet = float(betting_odds[current_bet][0:])
+                        new_bet = (new_bet + 100) / 100
+                    elif betting_odds[current_bet][0] == "−":
+                        new_bet = abs(float(betting_odds[current_bet][1:]))
+                        new_bet = 100 / new_bet
+                        new_bet = new_bet + 1
+                    else:
+                        print(betting_odds[current_bet])
+                        print("SOMETHING BAD HAPPENED - DRAFTKINGS, LINK : ", link)
+                    betting_odds[current_bet] = new_bet
+                Bets.append({
+                    "Team_One": teams[0],
+                    "Team_Two": teams[1],
+                    "Team One Win Return": betting_odds[0],
+                    "Team Two Win Return": betting_odds[2],
+                    "Draw Return": betting_odds[1],
+                    "Sports Website": "Draftkings.com"
+                })
+            print("Complete: ", link)
+        driver.quit()
+
+
+    #Need to find a way to enable javascript:
+    def barstool():
+        nonlocal Bets
+        link = "https://www.barstoolsportsbook.com/sports/football/usa/mls"
+        options = Options()
+        options.add_argument("start-maximized")
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver.get(link)
+        tm.sleep(15)
+        soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
+        soup = BeautifulSoup(soup)
+        soup.find('div', class_ ="v-window-item active-tab")
+        soup.findAll('div', class_ = "basic-event-row")
+        driver.quit()
+        for bet in soup:
+            x = bet
+            "body1 participant upcoming"
+            "outcome-card label event-chip-wrapper chip-small"
+            "live-event-header start-time upcoming"
+
+    betmgm()
+    Betsdump(Bets)
+
+    BallyBet()
+    Betsdump(Bets)
+
+    eighteighteight_sport()
+    Betsdump(Bets)
+
+    draftkings()
+    Betsdump(Bets)
+
+    actiontwentyfourseven()
+    Betsdump(Bets)
+
+    Bets = [dict(t) for t in {tuple(d.items()) for d in Bets}]
+
+    #Need to scrape bet365
+    print(len(Bets))
+    with open('TodaysBetsUnNormalized.pickle', 'w') as exportfile:
+        json.dump(Bets, exportfile)
+    print(Bets)
+
+
+
+if __name__ == '__main__':
+    scrapingFootball('PyCharm')
+
