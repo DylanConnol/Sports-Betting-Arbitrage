@@ -14,9 +14,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 import json
 
 
-#        driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Downloads/chromedriver')
-#         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
 def scrapingFootball(name):
     Bets = []
 
@@ -36,7 +33,7 @@ def scrapingFootball(name):
             options = Options()
             options.add_experimental_option("detach", True)
             options.add_argument("start-maximized")
-            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver = webdriver.Chrome(executable_path='PATHNAME', options=options)
             driver.get(link)
             #https://stackoverflow.com/questions/70861500/selenium-not-able-to-find-elements-by-classname
             elems = driver.find_element(By.XPATH, "//body")
@@ -71,7 +68,7 @@ def scrapingFootball(name):
         # link = "https://www.888sport.com/football/accas/international-matches/co-8/"
         # options = Options()
         # options.add_argument("start-maximized")
-        # driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+        # driver = webdriver.Chrome(executable_path='PATHNAME', options=options)
         # driver.get(link)
         # # https://stackoverflow.com/questions/70861500/selenium-not-able-to-find-elements-by-classname
         # elems = driver.find_element(By.XPATH, "//body")
@@ -118,7 +115,7 @@ def scrapingFootball(name):
         for link in links:
             options = Options()
             options.add_argument("start-maximized")
-            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver = webdriver.Chrome(executable_path='PATHNAME', options=options)
             driver.get(link)
             tm.sleep(5)
             try:
@@ -183,7 +180,7 @@ def scrapingFootball(name):
         for link in links:
             options = Options()
             options.add_argument("start-maximized")
-            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver = webdriver.Chrome(executable_path='PATHNAME', options=options)
             driver.get(link)
             # ignore_location = driver.find_element(By.CLASS_NAME, "table-padding")
             # ignore_location = ignore_location.find_element(By.XPATH, ".//div/a")
@@ -245,7 +242,7 @@ def scrapingFootball(name):
         for link in links:
             options = Options()
             options.add_argument("start-maximized")
-            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', options=options)
+            driver = webdriver.Chrome(executable_path='PATHNAME', options=options)
             driver.get(link)
             tm.sleep(7)
             soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
@@ -300,7 +297,7 @@ def scrapingFootball(name):
             options = webdriver.ChromeOptions()
             options.add_argument("start-maximized")
             # options.add_argument("ignore-certificate-errors")
-            driver = webdriver.Chrome(executable_path='/Users/dylanconnolly/Desktop/chromedriver', chrome_options=options)
+            driver = webdriver.Chrome(executable_path='PATHNAME', chrome_options=options)
             driver.get(link)
             tm.sleep(1)
             soup = driver.find_element(By.XPATH, '//body').get_attribute('innerHTML')
